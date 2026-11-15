@@ -1,6 +1,9 @@
 /// DreamGame: fixed-step simulation, sticker inventory and prototype presentation.
 function DreamGame() constructor {
-    width=1366; play_height=576; level_width=4098; gravity=850; run_speed=135;
+    width=1366; play_height=576; level_width=4098; gravity=850; run_speed=100;
+    step_up=32; step_down=40; small_gap=20; snap_range=24; foot_half=9;
+    // Wider visual footprints for tall stickers, with a small visible-edge tolerance.
+    ground_widths=[0.48,0.46,0.46,0.44,0.47,0.45,0.44,0.46];
     ground_y=405; start_right=480; goal_x=3978; goal_left=3740;
     camera_x=0; follow_x=width/3; grab_height=64; body_half=17; body_height=72;
     hook_radius=180; release_angle=degtorad(40);
@@ -44,23 +47,89 @@ function DreamGame() constructor {
         next_bags=[shuffle(0,bags[0][7]),shuffle(1,bags[1][4]),shuffle(2,bags[2][2])];
         camera_x=0;
         // Feet reference and one stable collision body for every paper pose.
-        player={px:100,py:ground_y,vx:run_speed,vy:0,state:"run",grounded:true,hook:-1,last_hook:-1,hook_lock:0,angle:0,omega:0,rope:140,land:0};
+        player={px:100,py:ground_y,vx:run_speed,vy:0,state:"run",grounded:true,hook:-1,last_hook:-1,hook_lock:0,angle:0,omega:0,rope:140,land:0,support:-1,visual_y:0};
         mode="ready"; drag=undefined; placed=0; accumulator=0; clock_time=0;
     };
     art_size=function(_kind,_variant) {
         var _a=assets[_kind][_variant], _scale=min(sizes[_kind][0]/_a.w,sizes[_kind][1]/_a.h);
+        if (_kind==0) _scale=max(_scale,200/_a.w);
         return [_a.w*_scale,_a.h*_scale];
     };
     make_sticker=function(_kind,_variant,_x,_y) {
         var _sz=art_size(_kind,_variant);
         return {kind:_kind,variant:_variant,px:_x,py:_y,w:_sz[0],h:_sz[1],top:_y-_sz[1]/2,pulse:0.25,armed:true,tilt:sin(_x*0.13+_variant*2)*1.5};
     };
+    surface_of=function(_s,_index) {
+        var half=_s.kind==0?_s.w*ground_widths[_s.variant]+6:_s.w*0.46;
+        return {left:_s.px-half,right:_s.px+half,top:_s.top+5,index:_index,kind:_s.kind};
+    };
+    surfaces=function() {
+        var list=[{left:24,right:start_right,top:ground_y,index:-1,kind:0},
+                  {left:goal_left,right:level_width-24,top:ground_y,index:-3,kind:0}];
+        for(var i=0;i<array_length(stickers);i++) if(stickers[i].kind!=1) array_push(list,surface_of(stickers[i],i));
+        return list;
+    };
+    snap_ground=function(_s,_free) {
+        if(_s.kind!=0 || _free) return _s;
+        var surface=surface_of(_s,-2), list=surfaces(), best=1000000, dx_best=0, dy_best=0;
+        for(var i=0;i<array_length(list);i++) {
+            var target=list[i];
+            if(target.kind!=0) continue;
+            var gap=max(target.left-surface.right,surface.left-target.right,0);
+            var dy=target.top-surface.top;
+            if(gap>snap_range || abs(dy)>snap_range) continue;
+            // Deep overlaps are deliberate stacking: do not flatten a small stair.
+            var overlap=min(target.right,surface.right)-max(target.left,surface.left);
+            if(overlap>40 && abs(dy)>8) continue;
+            var dx=0;
+            if(abs(surface.left-target.right)<=snap_range) dx=target.right-surface.left-2;
+            else if(abs(surface.right-target.left)<=snap_range) dx=target.left-surface.right+2;
+            var snap_score=abs(dy)+abs(dx)*0.5;
+            if(snap_score<best) { best=snap_score; dx_best=dx; dy_best=dy; }
+        }
+        _s.px+=dx_best; _s.py+=dy_best; _s.top+=dy_best;
+        return _s;
+    };
     valid_place=function(_s) {
-        if (_s.px-_s.w/2<8 || _s.px+_s.w/2>level_width-8 || _s.top<24 || _s.py+_s.h/2>play_height-12) return false;
-        var _p=player;
-        if (_s.kind!=1 && abs(_s.px-_p.px)<_s.w/2+body_half && _s.top>_p.py-body_height && _s.top<_p.py+3) return false;
-        if (_s.kind==1 && point_distance(_s.px,_s.py,_p.px,_p.py-grab_height)<50) return false;
-        if (point_distance(_s.px,_s.py,goal_x,ground_y-85)<95) return false;
+        var p=player;
+        if(_s.kind==0) {
+            var surface=surface_of(_s,-2);
+            // Only the useful support must fit. Paper decoration may hang below the library.
+            if(surface.left<0 || surface.right>level_width || surface.top<body_height+8 || surface.top>play_height-16) return false;
+            var touching=surface.right>p.px-body_half && surface.left<p.px+body_half;
+            if(touching && surface.top>p.py-body_height && surface.top<p.py+3) {
+                var rise=p.py-surface.top;
+                var safe_ground=p.grounded && rise<=step_up;
+                var safe_catch=p.state!="swing" && !p.grounded && p.vy>=0 && p.vy<=180 && abs(rise)<=12;
+                if(!safe_ground && !safe_catch) return false;
+            }
+            return true;
+        }
+        // Springs and hooks keep their own interaction rules.
+        if(_s.px-_s.w/2<8 || _s.px+_s.w/2>level_width-8 || _s.top<24 || _s.py+_s.h/2>play_height-12) return false;
+        if(_s.kind==2 && abs(_s.px-p.px)<_s.w/2+body_half && _s.top>p.py-body_height && _s.top<p.py+3) return false;
+        if(_s.kind==1 && point_distance(_s.px,_s.py,p.px,p.py-grab_height)<50) return false;
+        if(point_distance(_s.px,_s.py,goal_x,ground_y-85)<95) return false;
+        return true;
+    };
+    settle=function(_surface) {
+        var p=player, old_y=p.py;
+        p.py=_surface.top; p.vy=0; p.vx=run_speed; p.grounded=true;
+        p.state="run"; p.support=_surface.index; p.land=0.12;
+        // Collision is resolved immediately; drawing eases the small step.
+        p.visual_y=clamp(p.visual_y+old_y-p.py,-step_down,step_up);
+    };
+    commit_sticker=function(_s) {
+        if(mode!="playing" || !valid_place(_s)) return false;
+        var index=array_length(stickers);
+        array_push(stickers,_s); advance_bag(_s.kind); placed++;
+        if(_s.kind==0) {
+            var surf=surface_of(_s,index), p=player, rise=p.py-surf.top;
+            var overlaps=p.px+foot_half>surf.left && p.px-foot_half<surf.right;
+            var grounded_step=p.grounded && rise>=0 && rise<=step_up;
+            var slow_catch=!p.grounded && p.state!="swing" && p.vy>=0 && p.vy<=180 && rise>=0 && rise<=12;
+            if(overlaps && (grounded_step || slow_catch)) settle(surf);
+        }
         return true;
     };
     start=function() {
@@ -78,13 +147,13 @@ function DreamGame() constructor {
         return true;
     };
     preview=function(_x,_y) {
-        return make_sticker(drag.kind,drag.variant,_x+camera_x-drag.ox,_y-drag.oy);
+        return snap_ground(make_sticker(drag.kind,drag.variant,_x+camera_x-drag.ox,_y-drag.oy),keyboard_check(vk_shift));
     };
     finish_drag=function(_x,_y) {
         if (is_undefined(drag)) return false;
         var _s=preview(_x,_y);
         var _ok=mode=="playing" && _y<play_height && _x>=0 && _x<=width && valid_place(_s);
-        if (_ok) { array_push(stickers,_s); advance_bag(drag.kind); placed++; }
+        if (_ok) _ok=commit_sticker(_s);
         drag=undefined; return _ok;
     };
     release_hook=function() {
@@ -98,6 +167,7 @@ function DreamGame() constructor {
     };
     physics=function(_dt) {
         var _p=player; _p.land=max(0,_p.land-_dt);
+        _p.visual_y*=max(0,1-_dt*20);
         if (_p.state=="swing") {
             var _anchor=stickers[_p.hook];
             _p.omega+=-gravity/_p.rope*sin(_p.angle)*_dt; _p.omega*=power(0.999,_dt*60); _p.angle+=_p.omega*_dt;
@@ -106,29 +176,70 @@ function DreamGame() constructor {
         } else {
             var _oldx=_p.px, _oldy=_p.py, _was_grounded=_p.grounded;
             _p.vy+=gravity*_dt; _p.px+=_p.vx*_dt; _p.py+=_p.vy*_dt; _p.grounded=false;
-            var _hit=-2, _hit_y=1000000;
-            // Swept feet/plane checks prevent tunnelling through thin platforms.
-            if (_p.vy>=0) {
-                var _surfaces=[{left:24,right:start_right,top:ground_y,index:-1},{left:goal_left,right:level_width-24,top:ground_y,index:-1}];
-                for (var _i=0;_i<array_length(stickers);_i++) {
-                    var _s=stickers[_i];
-                    if (_s.kind!=1) array_push(_surfaces,{left:_s.px-_s.w*0.46,right:_s.px+_s.w*0.46,top:_s.top+5,index:_i});
+            var _hit=-2, _hit_y=1000000, _surfaces=surfaces(), _current=undefined;
+            for(var i=0;i<array_length(_surfaces);i++) {
+                var surf=_surfaces[i];
+                if(surf.index==_p.support && abs(surf.top-_oldy)<0.5) _current=surf;
+            }
+            // Walking support and falling interception are intentionally separate.
+            if(_was_grounded && !is_undefined(_current)) {
+                var up=undefined, base=undefined, down=undefined;
+                for(var i=0;i<array_length(_surfaces);i++) {
+                    var surf=_surfaces[i], delta=surf.top-_oldy;
+                    var overlaps=_p.px+foot_half>surf.left && _p.px-foot_half<surf.right;
+                    if(!overlaps) continue;
+                    // Only entering a forward edge may step upwards: stacked layers
+                    // cannot pull a stationary runner up one level every simulation tick.
+                    var entering=_oldx+foot_half<=surf.left+0.01 && _p.px+foot_half>surf.left;
+                    if(delta< -0.5 && delta>=-step_up && entering) {
+                        if(is_undefined(up) || surf.top>up.top) up=surf;
+                    } else if(abs(delta)<=0.5) {
+                        var spring=surf.kind==2 && stickers[surf.index].armed;
+                        if(is_undefined(base) || spring || (base.kind!=2 && surf.right>base.right)) base=surf;
+                    } else if(delta>0.5 && delta<=step_down) {
+                        if(is_undefined(down) || surf.top<down.top) down=surf;
+                    }
                 }
-                for (var _i=0;_i<array_length(_surfaces);_i++) {
-                    var _s=_surfaces[_i];
-                    if (_oldy<=_s.top+0.2 && _p.py>=_s.top) {
-                        var _ratio=clamp((_s.top-_oldy)/max(0.0001,_p.py-_oldy),0,1), _crossx=lerp(_oldx,_p.px,_ratio);
-                        var _spring_priority=_s.index>=0 && stickers[_s.index].kind==2 && stickers[_s.index].armed && abs(_s.top-_hit_y)<0.1;
-                        if (_crossx+body_half>_s.left && _crossx-body_half<_s.right && (_s.top<_hit_y || _spring_priority)) { _hit=_s.index; _hit_y=_s.top; }
+                var chosen=!is_undefined(up)?up:(!is_undefined(base)?base:down);
+                if(!is_undefined(chosen)) { _hit=chosen.index; _hit_y=chosen.top; }
+                else {
+                    // Keep support only over a genuinely small gap with a real landing.
+                    // The geometric distance is measured between edges, not from the body.
+                    for(var i=0;i<array_length(_surfaces);i++) {
+                        var surf=_surfaces[i], gap=surf.left-_current.right;
+                        if(gap>0 && gap<=small_gap && surf.top==_current.top
+                           && _p.px>=_current.right-foot_half && _p.px<surf.left
+                           && surf.right>_p.px) {
+                            _hit=_current.index; _hit_y=_current.top; break;
+                        }
                     }
                 }
             }
-            if (_hit!=-2) {
-                _p.py=_hit_y;
-                if (_hit>=0 && stickers[_hit].kind==2 && stickers[_hit].armed) {
+            if(_hit==-2 && _p.vy>=0) {
+                for(var i=0;i<array_length(_surfaces);i++) {
+                    var surf=_surfaces[i];
+                    if(_oldy<=surf.top+0.01 && _p.py>=surf.top) {
+                        var ratio=clamp((surf.top-_oldy)/max(0.0001,_p.py-_oldy),0,1), crossx=lerp(_oldx,_p.px,ratio);
+                        var spring=surf.kind==2 && stickers[surf.index].armed && abs(surf.top-_hit_y)<0.1;
+                        // A runner that has just left an edge must not repeatedly
+                        // regain support from its trailing body overhang.
+                        var half=_was_grounded?foot_half:body_half;
+                        if(crossx+half>surf.left && crossx-half<surf.right && (surf.top<_hit_y || spring)) {
+                            _hit=surf.index; _hit_y=surf.top;
+                        }
+                    }
+                }
+            }
+            if(_hit!=-2) {
+                if(_hit>=0 && stickers[_hit].kind==2 && stickers[_hit].armed) {
+                    _p.py=_hit_y; _p.support=-2;
                     _p.vy=-sqrt(2*gravity*max(24,_hit_y/2)); stickers[_hit].armed=false; stickers[_hit].pulse=0.45; _p.state="rise";
-                } else { _p.vy=0; _p.vx=run_speed; _p.grounded=true; _p.state="run"; if (!_was_grounded) _p.land=0.12; }
-            } else _p.state=_p.vy<0?"rise":"fall";
+                } else {
+                    if(_was_grounded && abs(_hit_y-_oldy)>0.5) _p.visual_y=clamp(_p.visual_y+_oldy-_hit_y,-step_down,step_up);
+                    _p.py=_hit_y; _p.vy=0; _p.vx=run_speed; _p.grounded=true; _p.support=_hit; _p.state="run";
+                    if(!_was_grounded || abs(_hit_y-_oldy)>0.5) _p.land=0.12;
+                }
+            } else { _p.support=-2; _p.state=_p.vy<0?"rise":"fall"; }
             // A grounded runner can also be caught; a spring wins its launch frame.
             if (!(_hit>=0 && stickers[_hit].kind==2 && _p.state=="rise")) {
                 for (var _i=0;_i<array_length(stickers);_i++) {
@@ -210,7 +321,10 @@ function DreamGame() constructor {
                 }
                 draw_line(_x+30,_s.py+130,_x+85,_s.py+100);
                 draw_line(_x+85,_s.py+100,_x+70,_s.py+99);
-            } else draw_line_width(_x-_s.w*0.46,_s.top+5,_x+_s.w*0.46,_s.top+5,2);
+            } else {
+                var surf=surface_of(_s,-2);
+                draw_line_width(surf.left-camera_x,surf.top,surf.right-camera_x,surf.top,2);
+            }
             draw_set_alpha(1);
         }
     };
@@ -221,8 +335,8 @@ function DreamGame() constructor {
         draw_triangle(_x1-nx,_y1-ny,_x2-nx*0.8,_y2-ny*0.8,_x2+nx*0.65,_y2+ny*0.65,false);
     };
     draw_player=function() {
-        var p=player, xx=p.px-camera_x, feet=min(p.py,play_height-8), hip=feet-27, shoulder=feet-51;
-        var stride=p.state=="run" && mode=="playing"?sin(floor(clock_time*9)/9*13)*15:4;
+        var p=player, xx=p.px-camera_x, feet=min(p.py+p.visual_y,play_height-8), hip=feet-27, shoulder=feet-51;
+        var stride=p.state=="run" && mode=="playing"?sin(floor(clock_time*7)/7*10)*15:4;
         if (p.land>0) { shoulder+=7; hip+=4; }
         if (mode=="won") draw_set_alpha(0.65+0.35*cos(clock_time*3));
         draw_set_color(ink);

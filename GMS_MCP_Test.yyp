@@ -1,0 +1,242 @@
+{
+  "$GMProject": "v1",
+  "%Name": "GMS_MCP_Test",
+  "AudioGroups": [
+    {
+      "$GMAudioGroup": "v1",
+      "%Name": "audiogroup_default",
+      "exportDir": "",
+      "name": "audiogroup_default",
+      "resourceType": "GMAudioGroup",
+      "resourceVersion": "2.0",
+      "targets": -1
+    }
+  ],
+  "configs": {
+    "children": [],
+    "name": "Default"
+  },
+  "defaultScriptType": 0,
+  "Folders": [
+    {
+      "$GMFolder": "",
+      "%Name": "Objects",
+      "folderPath": "folders/Objects.yy",
+      "name": "Objects",
+      "resourceType": "GMFolder",
+      "resourceVersion": "2.0"
+    }
+  ],
+  "ForcedPrefabProjectReferences": [],
+  "IncludedFiles": [
+    {
+      "$GMIncludedFile": "",
+      "%Name": "destination.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "destination.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "ground1.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "ground1.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "ground2.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "ground2.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "ground3.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "ground3.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "ground4.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "ground4.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "ground5.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "ground5.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "ground6.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "ground6.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "ground7.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "ground7.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "ground8.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "ground8.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "hook1.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "hook1.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "hook2.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "hook2.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "hook3.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "hook3.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "hook4.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "hook4.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "hook5.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "hook5.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "spring1.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "spring1.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "spring2.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "spring2.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "spring3.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "spring3.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    }
+  ],
+  "isEcma": false,
+  "LibraryEmitters": [],
+  "MetaData": {
+    "IDEVersion": "2026.0.0.16"
+  },
+  "name": "GMS_MCP_Test",
+  "resources": [
+    {
+      "id": {
+        "name": "obj_player",
+        "path": "objects/obj_player/obj_player.yy"
+      }
+    },
+    {
+      "id": {
+        "name": "Room1",
+        "path": "rooms/Room1/Room1.yy"
+      }
+    },
+    {
+      "id": {
+        "name": "scr_dream",
+        "path": "scripts/scr_dream/scr_dream.yy"
+      }
+    }
+  ],
+  "resourceType": "GMProject",
+  "resourceVersion": "2.0",
+  "RoomOrderNodes": [
+    {
+      "roomId": {
+        "name": "Room1",
+        "path": "rooms/Room1/Room1.yy"
+      }
+    }
+  ],
+  "templateType": "game",
+  "TextureGroups": [
+    {
+      "$GMTextureGroup": "",
+      "%Name": "Default",
+      "autocrop": true,
+      "border": 2,
+      "compressFormat": "bz2",
+      "customOptions": "",
+      "directory": "",
+      "groupParent": null,
+      "isScaled": true,
+      "loadType": "default",
+      "mipsToGenerate": 0,
+      "name": "Default",
+      "resourceType": "GMTextureGroup",
+      "resourceVersion": "2.0",
+      "targets": -1
+    }
+  ]
+}

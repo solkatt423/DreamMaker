@@ -9,19 +9,21 @@ function DreamGame() constructor {
     hook_radius=180; release_angle=degtorad(40);
     ink=make_color_rgb(233,227,211); muted=make_color_rgb(146,142,133); accent=make_color_rgb(203,174,119);
     colours=[make_color_rgb(159,196,165),make_color_rgb(169,180,221),make_color_rgb(225,171,127)];
-    slots=[296,683,1070]; library_y=674; sizes=[[270,150],[150,150],[138,146]];
-    assets=[[],[],[]]; counts=[8,5,3]; prefixes=["ground","hook","spring"]; all_sprites=[];
+    slots=[296,683,1070]; library_y=652; deck_w=244; deck_h=112; label_h=28; label_y=747; sizes=[[270,150],[150,150],[138,146]];
+    assets=[[],[],[]]; counts=[8,5,3]; prefixes=["ground","hook","spring"]; all_sprites=[]; labels=[];
     font_title=font_add("Georgia",29,false,true,32,128);
     randomise(); seed=irandom(1000000); clock_time=0; accumulator=0; mx=0; my=0;
-    load_art=function(_name) {
-        var _spr=sprite_add("stickers/"+_name+".png",1,false,false,0,0);
-        if (_spr<0) { show_debug_message("Missing sticker: "+_name); return {sprite:-1,w:100,h:100,left:0,top:0}; }
+    load_art=function(_path) {
+        var _spr=sprite_add(_path,1,false,false,0,0);
+        if (_spr<0) { show_debug_message("Missing artwork: "+_path); return {sprite:-1,w:100,h:100,left:0,top:0}; }
         array_push(all_sprites,_spr);
         var _l=sprite_get_bbox_left(_spr), _t=sprite_get_bbox_top(_spr);
         return {sprite:_spr,left:_l,top:_t,w:max(1,sprite_get_bbox_right(_spr)-_l+1),h:max(1,sprite_get_bbox_bottom(_spr)-_t+1)};
     };
-    for (var _k=0;_k<3;_k++) for (var _i=1;_i<=counts[_k];_i++) array_push(assets[_k],load_art(prefixes[_k]+string(_i)));
-    destination=load_art("destination");
+    for (var _k=0;_k<3;_k++) for (var _i=1;_i<=counts[_k];_i++) array_push(assets[_k],load_art("stickers/"+prefixes[_k]+string(_i)+".png"));
+    destination=load_art("stickers/destination.png");
+    // Slot captions sit in the strip below the sticker stacks.
+    labels=[load_art("ui/title_ground.png"),load_art("ui/title_hook.png"),load_art("ui/title_bounce.png")];
     shuffle=function(_kind,_previous) {
         var _bag=[];
         for (var _i=0;_i<counts[_kind];_i++) array_push(_bag,_i);
@@ -142,7 +144,7 @@ function DreamGame() constructor {
     };
     begin_drag=function(_kind,_mx,_my) {
         if (mode!="playing" || !is_undefined(drag)) return false;
-        var _variant=peek(_kind,0), _sz=art_size(_kind,_variant), _scale=min(244/_sz[0],142/_sz[1]);
+        var _variant=peek(_kind,0), _sz=art_size(_kind,_variant), _scale=min(deck_w/_sz[0],deck_h/_sz[1]);
         drag={kind:_kind,variant:_variant,ox:(_mx-slots[_kind])/_scale,oy:(_my-library_y)/_scale};
         return true;
     };
@@ -402,15 +404,19 @@ function DreamGame() constructor {
             var hover=mode=="playing" && is_undefined(drag) && point_in_rectangle(mx,my,slots[k]-145,590,slots[k]+145,758);
             for(var deck_depth=2;deck_depth>=0;deck_depth--) {
                 var variant=peek(k,deck_depth+(lifted?1:0));
-                var sz=art_size(k,variant), scale=min(244/sz[0],142/sz[1]);
+                var sz=art_size(k,variant), scale=min(deck_w/sz[0],deck_h/sz[1]);
                 var offset=deck_depth==0?0:(deck_depth==1?-19:17);
                 var tilt=deck_depth==0?-2+k*2:(deck_depth==1?7:-8);
                 draw_art(assets[k][variant],slots[k]+offset,library_y+deck_depth*2-(hover&&deck_depth==0?4:0),
                     sz[0]*scale,sz[1]*scale,deck_depth==0?1:0.65,c_white,tilt);
             }
         }
+        for(var k=0;k<3;k++) {
+            var label=labels[k], label_scale=label_h/max(1,label.h);
+            draw_art(label,slots[k],label_y,label.w*label_scale,label.h*label_scale,1,c_white,0);
+        }
         if(!is_undefined(drag) && my>=play_height) {
-            var sz=art_size(drag.kind,drag.variant), scale=min(244/sz[0],142/sz[1]);
+            var sz=art_size(drag.kind,drag.variant), scale=min(deck_w/sz[0],deck_h/sz[1]);
             draw_art(assets[drag.kind][drag.variant],mx-drag.ox*scale,my-drag.oy*scale,sz[0]*scale,sz[1]*scale,1,c_white,-5);
         }
         if(mode=="ready") {

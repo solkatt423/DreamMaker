@@ -181,6 +181,33 @@
       "name": "spring3.png",
       "resourceType": "GMIncludedFile",
       "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "title_bounce.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/ui",
+      "name": "title_bounce.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "title_ground.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/ui",
+      "name": "title_ground.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "title_hook.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/ui",
+      "name": "title_hook.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
     }
   ],
   "isEcma": false,

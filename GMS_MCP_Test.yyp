@@ -157,6 +157,42 @@
     },
     {
       "$GMIncludedFile": "",
+      "%Name": "obstacle1.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "obstacle1.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "obstacle2.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "obstacle2.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "obstacle3.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "obstacle3.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
+      "%Name": "obstacle4.png",
+      "CopyToMask": -1,
+      "filePath": "datafiles/stickers",
+      "name": "obstacle4.png",
+      "resourceType": "GMIncludedFile",
+      "resourceVersion": "2.0"
+    },
+    {
+      "$GMIncludedFile": "",
       "%Name": "spring1.png",
       "CopyToMask": -1,
       "filePath": "datafiles/stickers",

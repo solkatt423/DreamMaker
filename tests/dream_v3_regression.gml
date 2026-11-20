@@ -1,7 +1,11 @@
 function DreamV3Regression(_g) {
+    // Isolate movement/inventory regressions from the separately tested level hazards.
+    var restore_obstacles=_g.reset_obstacles;
+    _g.reset_obstacles=method(_g,function() { obstacles=[]; });
+    _g.reset();
     var result={lines:[],failed:0,check:function(ok,label) { array_push(lines,(ok?"PASS ":"FAIL ")+label); if(!ok) failed++; }};
     var check=result.check;
-    check(array_length(_g.all_sprites)==17,"17 source images loaded");
+    check(array_length(_g.all_sprites)==24,"24 game images loaded including labels and obstacles");
     check(!_g.begin_drag(0,_g.slots[0],_g.library_y),"cannot pick a sticker before begin");
     check(array_length(_g.stickers)==0,"ready board remains empty");
     _g.start();
@@ -176,6 +180,7 @@ function DreamV3Regression(_g) {
     var f=file_text_open_write("dream-v3-tests.txt");
     for(var i=0;i<array_length(result.lines);i++) { file_text_write_string(f,result.lines[i]); file_text_writeln(f); }
     file_text_write_string(f,"FAILURES="+string(result.failed)); file_text_close(f);
+    _g.reset_obstacles=restore_obstacles;
     _g.reset(); return result.failed;
 }
 

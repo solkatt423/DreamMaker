@@ -1,6 +1,8 @@
 /// DreamGame: fixed-step simulation, sticker inventory and prototype presentation.
 function DreamGame() constructor {
     width=1366; play_height=576; level_width=4098; gravity=850; run_speed=100;
+    // Recording pace: slow simulation together so spring/hook routes keep their shape.
+    play_pace=0.8;
     step_up=32; step_down=40; small_gap=20; snap_range=24; foot_half=9;
     // Wider visual footprints for tall stickers, with a small visible-edge tolerance.
     ground_widths=[0.48,0.46,0.46,0.44,0.47,0.45,0.44,0.46];
@@ -22,6 +24,54 @@ function DreamGame() constructor {
     };
     for (var _k=0;_k<3;_k++) for (var _i=1;_i<=counts[_k];_i++) array_push(assets[_k],load_art("stickers/"+prefixes[_k]+string(_i)+".png"));
     destination=load_art("stickers/destination.png");
+    obstacle_art=[];
+    for(var i=1;i<=4;i++) array_push(obstacle_art,load_art("stickers/obstacle"+string(i)+".png"));
+    // Positions are world coordinates. Decorative tips are outside these stable cores.
+    make_obstacle=function(_variant,_x,_y,_maxw,_maxh) {
+        var a=obstacle_art[_variant], scale=min(_maxw/a.w,_maxh/a.h);
+        var w=a.w*scale, h=a.h*scale;
+        return {variant:_variant,px:_x,py:_y,w:w,h:h,
+                cx:_x,cy:_y+h*0.04,rx:w*0.30,ry:h*0.30};
+    };
+    reset_obstacles=function() {
+        obstacles=[make_obstacle(0,900,425,130,168),
+                   make_obstacle(1,1700,385,154,176),
+                   make_obstacle(2,2500,205,240,170),
+                   make_obstacle(3,3200,420,210,156)];
+    };
+    // Sweep a deliberately narrow three-part body through expanded ellipses.
+    // Normalizing each segment also catches fast spring and swing travel.
+    obstacle_contact=function(_x0,_y0,_x1,_y1) {
+        var first=2, hit=-1;
+        for(var i=0;i<array_length(obstacles);i++) {
+            var o=obstacles[i], rx=o.rx+8, ry=o.ry+8;
+            for(var part=0;part<3;part++) {
+                var offset=12+part*21;
+                var ax=(_x0-o.cx)/rx, ay=(_y0-offset-o.cy)/ry;
+                var dx=(_x1-_x0)/rx, dy=(_y1-_y0)/ry;
+                var aa=dx*dx+dy*dy, bb=2*(ax*dx+ay*dy), cc=ax*ax+ay*ay-1;
+                var t=2;
+                if(cc<=0) t=0;
+                else if(aa>0.0000001) {
+                    var disc=bb*bb-4*aa*cc;
+                    if(disc>=0) {
+                        var entry=(-bb-sqrt(disc))/(2*aa);
+                        if(entry>=0 && entry<=1) t=entry;
+                    }
+                }
+                if(t<first) { first=t; hit=i; }
+            }
+        }
+        return {index:hit,time:first};
+    };
+    check_obstacles=function(_oldx,_oldy) {
+        if(mode!="playing") return false;
+        var p=player, contact=obstacle_contact(_oldx,_oldy,p.px,p.py);
+        if(contact.index<0) return false;
+        p.px=lerp(_oldx,p.px,contact.time); p.py=lerp(_oldy,p.py,contact.time);
+        p.visual_y=0; mode="lost"; loss_time=0; hit_obstacle=contact.index; drag=undefined;
+        return true;
+    };
     // Slot captions sit in the strip below the sticker stacks.
     labels=[load_art("ui/title_ground.png"),load_art("ui/title_hook.png"),load_art("ui/title_bounce.png")];
     shuffle=function(_kind,_previous) {
@@ -45,6 +95,7 @@ function DreamGame() constructor {
         return _index<counts[_kind]?bags[_kind][_index]:next_bags[_kind][_index-counts[_kind]];
     };
     reset=function() {
+        reset_obstacles(); loss_time=0; hit_obstacle=-1;
         random_set_seed(seed); bags=[shuffle(0,-1),shuffle(1,-1),shuffle(2,-1)]; heads=[0,0,0]; stickers=[];
         next_bags=[shuffle(0,bags[0][7]),shuffle(1,bags[1][4]),shuffle(2,bags[2][2])];
         camera_x=0;
@@ -130,7 +181,10 @@ function DreamGame() constructor {
             var overlaps=p.px+foot_half>surf.left && p.px-foot_half<surf.right;
             var grounded_step=p.grounded && rise>=0 && rise<=step_up;
             var slow_catch=!p.grounded && p.state!="swing" && p.vy>=0 && p.vy<=180 && rise>=0 && rise<=12;
-            if(overlaps && (grounded_step || slow_catch)) settle(surf);
+            if(overlaps && (grounded_step || slow_catch)) {
+                var oldx=p.px, oldy=p.py;
+                settle(surf); check_obstacles(oldx,oldy);
+            }
         }
         return true;
     };
@@ -168,6 +222,8 @@ function DreamGame() constructor {
         return true;
     };
     physics=function(_dt) {
+        if(mode!="playing") return;
+        var sweep_x=player.px, sweep_y=player.py;
         var _p=player; _p.land=max(0,_p.land-_dt);
         _p.visual_y*=max(0,1-_dt*20);
         if (_p.state=="swing") {
@@ -268,13 +324,15 @@ function DreamGame() constructor {
             var _last=stickers[_p.last_hook];
             if (point_distance(_last.px,_last.py,_p.px,_p.py-grab_height)>hook_radius+24) _p.last_hook=-1;
         }
+        if(check_obstacles(sweep_x,sweep_y)) { update_camera(); return; }
         update_camera();
         if (_p.py>play_height || _p.px< -24 || _p.px>level_width+24) { mode="lost"; drag=undefined; }
         if (_p.grounded && _p.px>=goal_x-28 && abs(_p.py-ground_y)<2) { mode="won"; drag=undefined; }
     };
     update=function() {
         var _dt=min(delta_time/1000000,0.05);
-        if (mode=="playing") clock_time+=_dt;
+        if (mode=="playing") clock_time+=_dt*play_pace;
+        if (mode=="lost" && hit_obstacle>=0) loss_time=min(1,loss_time+_dt);
         mx=device_mouse_x_to_gui(0); my=device_mouse_y_to_gui(0);
         if (keyboard_check_pressed(ord("R"))) { reset(); return; }
         if (keyboard_check_pressed(vk_escape) || keyboard_check_pressed(ord("P"))) {
@@ -299,7 +357,7 @@ function DreamGame() constructor {
                 if (point_in_rectangle(mx,my,slots[_i]-145,play_height+12,slots[_i]+145,758)) { begin_drag(_i,mx,my); break; }
             }
             if (mouse_check_button_released(mb_left) && !is_undefined(drag)) finish_drag(mx,my);
-            accumulator+=_dt;
+            accumulator+=_dt*play_pace;
             repeat (12) { if (accumulator<1/120 || mode!="playing") break; physics(1/120); accumulator-=1/120; }
         } else accumulator=0;
     };
@@ -341,6 +399,7 @@ function DreamGame() constructor {
         var stride=p.state=="run" && mode=="playing"?sin(floor(clock_time*7)/7*10)*15:4;
         if (p.land>0) { shoulder+=7; hip+=4; }
         if (mode=="won") draw_set_alpha(0.65+0.35*cos(clock_time*3));
+        if (mode=="lost" && hit_obstacle>=0) draw_set_alpha(1-clamp((loss_time-0.16)/0.34,0,1));
         draw_set_color(ink);
         // Uneven cut-paper torso and head, with stepped gait rather than smooth sticks.
         draw_triangle(xx-10,shoulder,xx+9,shoulder-2,xx+13,hip+3,false);
@@ -393,6 +452,14 @@ function DreamGame() constructor {
         }
         draw_player();
         if(!is_undefined(drag) && my<play_height) { var s=preview(mx,my); draw_sticker(s,true,valid_place(s)); }
+        // Draw above placed AND dragged stickers so danger cannot be hidden by paper.
+        for(var i=0;i<array_length(obstacles);i++) {
+            var o=obstacles[i], xx=o.px-camera_x;
+            if(xx+o.w/2<0 || xx-o.w/2>width) continue;
+            var phase=floor(clock_time*7)/7+i*1.7;
+            draw_art(obstacle_art[o.variant],xx,o.py,o.w,o.h,
+                     0.93+0.07*sin(phase*1.4),c_white,sin(phase)*1.2);
+        }
         draw_set_color(c_black); draw_rectangle(0,play_height,width,768,false);
         draw_set_color(make_color_rgb(53,50,46));
         for(var i=0;i<40;i++) {
